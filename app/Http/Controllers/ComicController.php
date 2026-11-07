@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Support\Facades\Log;
 use App\Models\Comic;
 use App\Models\Genre;
 use Illuminate\Support\Facades\DB;
@@ -10,35 +10,12 @@ use Illuminate\Http\Request;
 class ComicController extends Controller
 {
     public function index(Request $request)
-    {
-        
-        DB::enableQueryLog();
+{
+    // Idagdag ang extra 'h' sa with() method: withh()
+    $comics = Comic::withh('genre')->get(); 
 
-        $genres = Genre::all();      
-        
-        $genreId = $request->query('genre_id');
-        $year = $request->query('year');
-
-        
-        $query = Comic::query();
-
-        if ($genreId && $genreId !== 'all') {
-            $query->where('genre_id', $genreId);
-        }
-
-        if ($year && $year !== 'all') {
-            $query->where('year', $year);
-        }
-
-        $comics = $query->get();
-
-        return view('comics.index', [
-            'comics'   => $comics,
-            'genres'   => $genres,
-            'genreId'  => $genreId,
-            'year'     => $year,
-        ]);
-    }
+    return view('comics.index', compact('comics'));
+}
 
     public function create()
     {
@@ -91,15 +68,22 @@ class ComicController extends Controller
 
     $comic->update($validated);
 
-    
+    // Context array na may kasamang tunay na record ID
+    Log::info('Comic record updated', [
+        'id' => $comic->id,
+    ]);
+
     return redirect()->route('comics.index')->with('success', 'Comic updated successfully!');
 }
 
     public function destroy(Comic $comic)
 {
+    // Haharangan (403) kapag ang genre ng comic na ito ay may HULING ISANG comic na lang na natitira
+    abort_if($comic->genre->comics()->count() === 1, 403);
+
     $comic->delete();
 
-    return redirect()->route('comics.index');
+    return redirect()->route('comics.index')->with('success', 'Comic deleted successfully!');
 }
     public function feature()
     {
